@@ -232,3 +232,11 @@ D: llvm-objcopy (tools/llvm-objcopy)
 N: Martin Storsjö
 E: martin@martin.st
 D: MinGW
+
+N: Zi Xuan Wu (Zeson)
+E: zixuan.wu@linux.alibaba.com
+D: C-SKY backend (lib/Target/CSKY/*)
+
+N: min guo (kenny)
+E: guo-m@klab.com
+D: obfuscator (llvm/lib/transforms/Obfuscation)
