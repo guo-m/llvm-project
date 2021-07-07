@@ -549,6 +549,8 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createBogus(BogusControlFlow));
   MPM.add(createFlattening(Flattening));
   MPM.add(createStringObfuscation(StringObf));
+  MPM.add(createSubstitution(Substitution));
+
 
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
@@ -892,7 +894,7 @@ void PassManagerBuilder::populateModulePassManager(
   if ((EnableHotColdSplit || SplitColdCode) &&
       !(PrepareForLTO || PrepareForThinLTO))
     MPM.add(createHotColdSplittingPass());
-
+  
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
 
