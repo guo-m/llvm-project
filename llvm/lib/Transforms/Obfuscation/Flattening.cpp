@@ -41,7 +41,7 @@ Pass *llvm::createFlattening(bool flag) { return new Flattening(flag); }
 
 bool Flattening::runOnFunction(Function &F) {
   Function *tmp = &F;
-  errs() << "[Frontend]: runOnFunction.\n";
+  // errs() << "[Frontend]: runOnFunction.\n";
   // Do we obfuscate
   if (toObfuscate(flag, tmp, "fla")) {
     if (flatten(tmp)) {
@@ -244,8 +244,8 @@ bool Flattening::flatten(Function *f) {
     }
   }
 
-  errs() << "[Frontend]: Recalculate switchVar end\n";
+  // errs() << "[Frontend]: Recalculate switchVar end\n";
   fixStack(f);
-  errs() << "[Frontend]: fixStack end\n";
+  // errs() << "[Frontend]: fixStack end\n";
   return true;
 }
