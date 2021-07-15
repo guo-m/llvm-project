@@ -30,18 +30,13 @@ extern ManagedStatic<CryptoUtils> cryptoutils;
 #define BYTE(x, n) (((x) >> (8 * (n))) & 0xFF)
 
 #if defined(__i386) || defined(__i386__) || defined(_M_IX86) ||                \
-    defined(INTEL_CC) || defined(_WIN64) || defined(_WIN32)
+    defined(INTEL_CC)
 
 #ifndef ENDIAN_LITTLE
 #define ENDIAN_LITTLE
 #endif
 #define ENDIAN_32BITWORD
-
-#if !defined(_WIN64) || !defined(_WIN32)
-#ifndef UNALIGNED
 #define UNALIGNED
-#endif
-#endif
 
 #elif defined(__alpha)
 
@@ -73,8 +68,15 @@ extern ManagedStatic<CryptoUtils> cryptoutils;
 #endif
 #if defined(__arch64__)
 #define ENDIAN_64BITWORD
+#ifndef ENDIAN_LITTLE
+#define ENDIAN_LITTLE
+#endif
 #else
 #define ENDIAN_32BITWORD
+#ifndef ENDIAN_LITTLE
+#define ENDIAN_LITTLE
+#endif
+
 #endif
 
 #endif
@@ -83,9 +85,16 @@ extern ManagedStatic<CryptoUtils> cryptoutils;
 #define ENDIAN_BIG
 #endif
 
+//fixme: always assume windows is little endian
+#if _WIN32 || _WIN64
+#define ENDIAN_LITTLE
+#endif
+
 #if !defined(ENDIAN_BIG) && !defined(ENDIAN_LITTLE)
-#error                                                                         \
-    "Unknown endianness of the compilation platform, check this header aes_encrypt.h"
+//default little endian
+#define ENDIAN_LITTLE
+// #error                                                                         \
+//     "Unknown endianness of the compilation platform, check this header aes_encrypt.h"
 #endif
 
 #ifdef ENDIAN_LITTLE
