@@ -16,7 +16,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Obfuscation/Utils.h"
-
+#include "llvm/Support/Regex.h"
+#include "llvm/Support/JSON.h"
 #define DEBUG_TYPE "substitution"
 
 using namespace llvm;
@@ -27,10 +28,10 @@ using namespace llvm;
 #define NUMBER_OR_SUBST 2
 #define NUMBER_XOR_SUBST 2
 
-static cl::opt<int>
-    ObfTimes("sub_loop",
-             cl::desc("Choose how many time the -sub pass loops on a function"),
-             cl::value_desc("number of times"), cl::init(1), cl::Optional);
+// static cl::opt<int>
+//     SubTimes("sub_loop",
+//              cl::desc("Choose how many time the -sub pass loops on a function"),
+//              cl::value_desc("number of times"), cl::init(1), cl::Optional);
 
 // Stats
 STATISTIC(Add, "Add substitued");
@@ -45,18 +46,17 @@ STATISTIC(Xor, "Xor substitued");
 
 namespace {
 
-struct Substitution : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+struct Substitution : public FunctionPassCnf {
+  static char ID;
   void (Substitution::*funcAdd[NUMBER_ADD_SUBST])(BinaryOperator *bo);
   void (Substitution::*funcSub[NUMBER_SUB_SUBST])(BinaryOperator *bo);
   void (Substitution::*funcAnd[NUMBER_AND_SUBST])(BinaryOperator *bo);
   void (Substitution::*funcOr[NUMBER_OR_SUBST])(BinaryOperator *bo);
   void (Substitution::*funcXor[NUMBER_XOR_SUBST])(BinaryOperator *bo);
-  bool flag;
+  int SubTimes;
+  Substitution() : FunctionPassCnf(ID) {}
 
-  Substitution() : FunctionPass(ID) {}
-
-  Substitution(bool flag) : FunctionPass(ID) {
+  Substitution(bool flag) : FunctionPassCnf(ID) {
     this->flag = flag;
     funcAdd[0] = &Substitution::addNeg;
     funcAdd[1] = &Substitution::addDoubleNeg;
@@ -105,26 +105,35 @@ static RegisterPass<Substitution> X("substitution", "operators substitution");
 Pass *llvm::createSubstitution(bool flag) { return new Substitution(flag); }
 
 bool Substitution::runOnFunction(Function &F) {
-  // Check if the percentage is correct
-  if (ObfTimes <= 0) {
-    errs() << "Substitution application number -sub_loop=x must be x > 0";
+  // judgment if need to flattening
+  if (!this->flag)
+  {
+    errs() << "[Frontend]: Not Substitution!!\n";
+    return false;
+  }
+  
+  llvm::json::Object *jsonObj = configJson.getAsObject();
+  if (!toValidateJson(jsonObj))
+  { 
+    std::exit(EXIT_FAILURE);
+  }
+  
+  SubTimes = jsonObj->getInteger("sub_loop").getValueOr(0);
+  // Check if the percentage is correct sub_loop
+  if (SubTimes <= 0) {
+    errs() << "Substitution application number sub_loop=x must be x > 0";
     return false;
   }
 
-  Function *tmp = &F;
-  // Do we obfuscate
-  if (toObfuscate(flag, tmp, "sub")) {
-    substitute(tmp);
-    return true;
-  }
-  return false;
+  substitute(&F);
+  return true;
 }
 
 bool Substitution::substitute(Function *f) {
   Function *tmp = f;
 
   // Loop for the number of time we run the pass on the function
-  int times = ObfTimes;
+  int times = SubTimes;
   do {
     for (Function::iterator bb = tmp->begin(); bb != tmp->end(); ++bb) {
       for (BasicBlock::iterator inst = bb->begin(); inst != bb->end(); ++inst) {

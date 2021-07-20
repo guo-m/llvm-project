@@ -14,6 +14,9 @@
 #include "llvm/Transforms/Obfuscation/Flattening.h"
 #include "llvm/Transforms/Obfuscation/CryptoUtils.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Regex.h"
+
 
 #define DEBUG_TYPE "flattening"
 
@@ -23,12 +26,10 @@ using namespace llvm;
 STATISTIC(Flattened, "Functions flattened");
 
 namespace {
-struct Flattening : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  bool flag;
-
-  Flattening() : FunctionPass(ID) {}
-  Flattening(bool flag) : FunctionPass(ID) { this->flag = flag; }
+struct Flattening : public FunctionPassCnf {
+  static char ID;
+  Flattening() : FunctionPassCnf(ID) {}
+  Flattening(bool flag) : FunctionPassCnf(ID) { this->flag = flag; }
 
   bool runOnFunction(Function &F);
   bool flatten(Function *f);
@@ -40,12 +41,40 @@ static RegisterPass<Flattening> X("flattening", "Call graph flattening");
 Pass *llvm::createFlattening(bool flag) { return new Flattening(flag); }
 
 bool Flattening::runOnFunction(Function &F) {
-  Function *tmp = &F;
-  // errs() << "[Frontend]: runOnFunction.\n";
-  // Do we obfuscate
-  if (toObfuscate(flag, tmp, "fla")) {
-    if (flatten(tmp)) {
-      ++Flattened;
+  // judgment if need to flattening
+  if (!this->flag)
+  {
+    errs() << "[Frontend]: Not Flattening!!\n";
+    return false;
+  }
+  
+  llvm::json::Object *jsonObj = configJson.getAsObject();
+  if (!toValidateJson(jsonObj))
+  { 
+    std::exit(EXIT_FAILURE);
+  }
+  
+  llvm::json::Array *flattenArray = jsonObj->getArray("obfuscation");
+  int enable_fla = jsonObj->getInteger("fla").getValueOr(1);
+  
+  if (!enable_fla)
+  {
+    errs() << "[Frontend]: Not Flattening!!\n";
+    return false;
+  }
+  
+  for (auto &obj : *flattenArray) {
+
+    std::string funcName = obj.getAsObject()->getString("name")->str();
+    llvm::Regex reFuncName(funcName);
+
+    if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
+      obfuscatedFuncs.insert(F.getName().str());
+      errs() << "[Frontend]: Flattening func " << F.getName() << "\n";
+      if (flatten(&F)) {
+        ++Flattened;
+        errs() << "[Frontend]: Successfully flattened func " << F.getName() << "\n";
+      }
     }
   }
 

@@ -96,6 +96,8 @@
 
 #include "llvm/Transforms/Obfuscation/BogusControlFlow.h"
 #include "llvm/Transforms/Obfuscation/Utils.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/Regex.h"
 
 // Stats
 #define DEBUG_TYPE "BogusControlFlow"
@@ -114,25 +116,27 @@ using namespace llvm;
 // Options for the pass
 const int defaultObfRate = 30, defaultObfTime = 1;
 
-static cl::opt<int>
-    ObfProbRate("bcf_prob",
-                cl::desc("Choose the probability [%] each basic blocks will be "
-                         "obfuscated by the -bcf pass"),
-                cl::value_desc("probability rate"), cl::init(defaultObfRate),
-                cl::Optional);
+//static cl::opt<int>
+//    ObfProbRate("bcf_prob",
+//                cl::desc("Choose the probability [%] each basic blocks will be "
+//                         "obfuscated by the -bcf pass"),
+//                cl::value_desc("probability rate"), cl::init(defaultObfRate),
+//                cl::Optional);
 
-static cl::opt<int>
-    ObfTimes("bcf_loop",
-             cl::desc("Choose how many time the -bcf pass loop on a function"),
-             cl::value_desc("number of times"), cl::init(defaultObfTime),
-             cl::Optional);
+//static cl::opt<int>
+//    ObfTimes("bcf_loop",
+//             cl::desc("Choose how many time the -bcf pass loop on a function"),
+//             cl::value_desc("number of times"), cl::init(defaultObfTime),
+//             cl::Optional);
 
 namespace {
-struct BogusControlFlow : public FunctionPass {
+struct BogusControlFlow : public FunctionPassCnf {
   static char ID; // Pass identification
-  bool flag;
-  BogusControlFlow() : FunctionPass(ID) {}
-  BogusControlFlow(bool flag) : FunctionPass(ID) {
+  int ObfTimes;
+  int ObfProbRate;
+
+  BogusControlFlow() : FunctionPassCnf(ID) {}
+  BogusControlFlow(bool flag) : FunctionPassCnf(ID) {
     this->flag = flag;
     BogusControlFlow();
   }
@@ -143,25 +147,57 @@ struct BogusControlFlow : public FunctionPass {
    * to the function. See header for more details.
    */
   virtual bool runOnFunction(Function &F) {
-    // Check if the percentage is correct
-    if (ObfTimes <= 0) {
-      errs() << "BogusControlFlow application number -bcf_loop=x must be x > 0";
+    // judgment if need to BogusControlFlow
+    if (!this->flag)
+    {
+      errs() << "[Frontend]: Not BogusControlFlow!!\n";
       return false;
     }
-
-    // Check if the number of applications is correct
-    if (!((ObfProbRate > 0) && (ObfProbRate <= 100))) {
-      errs() << "BogusControlFlow application basic blocks percentage "
-                "-bcf_prob=x must be 0 < x <= 100";
-      return false;
-    }
-    // If fla annotations
-    if (toObfuscate(flag, &F, "bcf")) {
-      bogus(F);
-      doF(*F.getParent());
-      return true;
+    
+    llvm::json::Object *jsonObj = configJson.getAsObject();
+    if (!toValidateJson(jsonObj))
+    { 
+      std::exit(EXIT_FAILURE);
     }
 
+    llvm::json::Array *BogusArray = jsonObj->getArray("obfuscation");
+
+    for (auto &obj : *BogusArray) {
+
+      if (!obj.getAsObject()->getString("bcf")) {
+        errs() << "[Frontend]: Config Error: missing 'bcf' string object in obfuscation array\n";
+        return false;
+      }
+
+      ObfTimes = jsonObj->getInteger("bcf_loop").getValueOr(0);
+
+      // Check if the percentage is correct
+      if (ObfTimes <= 0) {
+        errs() << "BogusControlFlow application number bcf_loop=x must be x > 0";
+        return false;
+      }
+
+      ObfProbRate = jsonObj->getInteger("bcf_prob").getValueOr(0);
+
+      // Check if the number of applications is correct
+      if (!((ObfProbRate > 0) && (ObfProbRate <= 100))) {
+        errs() << "BogusControlFlow application basic blocks percentage "
+                  "bcf_prob=x must be 0 < x <= 100";
+        return false;
+      }
+
+      std::string funcName = obj.getAsObject()->getString("name")->str();
+      llvm::Regex reFuncName(funcName);
+
+      if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
+        obfuscatedFuncs.insert(F.getName().str());
+        errs() << "[Frontend]: bogusControlFlow func " << F.getName() << "\n";
+        bogus(F);
+        doF(*F.getParent());
+        errs() << "[Frontend]: Successfully bogusControlFlow func " << F.getName() << "\n";
+        return true;
+      }
+    }
     return false;
   } // end of runOnFunction()
 

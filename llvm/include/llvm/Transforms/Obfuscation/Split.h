@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Obfuscation/Utils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h" // For DemoteRegToStack and DemotePHIToStack
+#include "llvm/Transforms/Obfuscation/FunctionPassCnf.h"
 
 namespace llvm {
 Pass *createSplitBasicBlock(bool flag);

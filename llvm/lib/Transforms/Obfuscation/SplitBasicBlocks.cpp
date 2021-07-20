@@ -14,7 +14,8 @@
 #include "llvm/Transforms/Obfuscation/CryptoUtils.h"
 #include "llvm/Transforms/Obfuscation/Split.h"
 #include "llvm/Transforms/Obfuscation/Utils.h"
-
+#include "llvm/Support/Regex.h"
+#include "llvm/Support/JSON.h"
 #define DEBUG_TYPE "split"
 
 using namespace llvm;
@@ -22,17 +23,15 @@ using namespace llvm;
 // Stats
 STATISTIC(Split, "Basicblock splitted");
 
-static cl::opt<int> SplitNum("split_num", cl::init(2),
-                             cl::desc("Split <split_num> time each BB"));
+//static cl::opt<int> SplitNum("split_num", cl::init(2),
+//                             cl::desc("Split <split_num> time each BB"));
 
 namespace {
-struct SplitBasicBlock : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  bool flag;
-
-  SplitBasicBlock() : FunctionPass(ID) {}
-  SplitBasicBlock(bool flag) : FunctionPass(ID) { this->flag = flag; }
-
+struct SplitBasicBlock : public FunctionPassCnf {
+  static char ID;
+  int SplitNum;
+  SplitBasicBlock() : FunctionPassCnf(ID) {}
+  SplitBasicBlock(bool flag) : FunctionPassCnf(ID) { this->flag = flag; }
   bool runOnFunction(Function &F);
   void split(Function *f);
 
@@ -49,19 +48,38 @@ Pass *llvm::createSplitBasicBlock(bool flag) {
 }
 
 bool SplitBasicBlock::runOnFunction(Function &F) {
-  // Check if the number of applications is correct
+  // judgment if need to flattening
+  if (!this->flag)
+  {
+    errs() << "[Frontend]: Not SplitBasicBlock!!\n";
+    return false;
+  }
+  
+  llvm::json::Object *jsonObj = configJson.getAsObject();
+  if (!toValidateJson(jsonObj))
+  { 
+    std::exit(EXIT_FAILURE);
+  }
+
+  llvm::json::Array *splitArray = jsonObj->getArray("obfuscation");
+
+  SplitNum = jsonObj->getInteger("split_num").getValueOr(0);
+  // Check if the split num is correct
   if (!((SplitNum > 1) && (SplitNum <= 10))) {
     errs() << "Split application basic block percentage\
             -split_num=x must be 1 < x <= 10";
     return false;
   }
 
-  Function *tmp = &F;
-
-  // Do we obfuscate
-  if (toObfuscate(flag, tmp, "split")) {
-    split(tmp);
-    ++Split;
+  for (auto &obj : *splitArray) {
+    std::string funcName = obj.getAsObject()->getString("name")->str();
+    llvm::Regex reFuncName(funcName);
+    if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
+      obfuscatedFuncs.insert(F.getName().str());
+      errs() << "[Frontend]: SplitBasicBlock func " << F.getName() << "\n";
+      split(&F);
+      ++Split;
+    }
   }
 
   return false;
