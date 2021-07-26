@@ -29,7 +29,7 @@ namespace {
 struct Flattening : public FunctionPassCnf {
   static char ID;
   Flattening() : FunctionPassCnf(ID) {}
-  Flattening(bool flag) : FunctionPassCnf(ID) { this->flag = flag; }
+  Flattening(bool flag) : FunctionPassCnf(flag, ID) {}
 
   bool runOnFunction(Function &F);
   bool flatten(Function *f);
@@ -49,20 +49,14 @@ bool Flattening::runOnFunction(Function &F) {
   }
   
   llvm::json::Object *jsonObj = configJson.getAsObject();
-  if (!toValidateJson(jsonObj))
-  { 
-    std::exit(EXIT_FAILURE);
-  }
-  
-  llvm::json::Array *flattenArray = jsonObj->getArray("obfuscation");
   int enable_fla = jsonObj->getInteger("fla").getValueOr(1);
-  
   if (!enable_fla)
   {
     errs() << "[Frontend]: Not Flattening!!\n";
     return false;
   }
   
+  llvm::json::Array *flattenArray = jsonObj->getArray("obfuscation");
   for (auto &obj : *flattenArray) {
 
     std::string funcName = obj.getAsObject()->getString("name")->str();
@@ -74,6 +68,7 @@ bool Flattening::runOnFunction(Function &F) {
       if (flatten(&F)) {
         ++Flattened;
         errs() << "[Frontend]: Successfully flattened func " << F.getName() << "\n";
+        return true;
       }
     }
   }
@@ -273,8 +268,8 @@ bool Flattening::flatten(Function *f) {
     }
   }
 
-  // errs() << "[Frontend]: Recalculate switchVar end\n";
+  errs() << "[Frontend]: Recalculate switchVar end\n";
   fixStack(f);
-  // errs() << "[Frontend]: fixStack end\n";
+  errs() << "[Frontend]: fixStack end\n";
   return true;
 }

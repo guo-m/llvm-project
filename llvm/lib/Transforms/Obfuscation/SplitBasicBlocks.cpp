@@ -31,7 +31,7 @@ struct SplitBasicBlock : public FunctionPassCnf {
   static char ID;
   int SplitNum;
   SplitBasicBlock() : FunctionPassCnf(ID) {}
-  SplitBasicBlock(bool flag) : FunctionPassCnf(ID) { this->flag = flag; }
+  SplitBasicBlock(bool flag) : FunctionPassCnf(flag, ID) {}
   bool runOnFunction(Function &F);
   void split(Function *f);
 
@@ -56,29 +56,28 @@ bool SplitBasicBlock::runOnFunction(Function &F) {
   }
   
   llvm::json::Object *jsonObj = configJson.getAsObject();
-  if (!toValidateJson(jsonObj))
-  { 
-    std::exit(EXIT_FAILURE);
-  }
-
   llvm::json::Array *splitArray = jsonObj->getArray("obfuscation");
-
-  SplitNum = jsonObj->getInteger("split_num").getValueOr(0);
-  // Check if the split num is correct
-  if (!((SplitNum > 1) && (SplitNum <= 10))) {
-    errs() << "Split application basic block percentage\
-            -split_num=x must be 1 < x <= 10";
-    return false;
-  }
-
+  
   for (auto &obj : *splitArray) {
+
+    SplitNum = obj.getAsObject()->getInteger("split_num").getValueOr(0);
+    // Check if the split num is correct
+    if (!((SplitNum > 1) && (SplitNum <= 10))) {
+      errs() << "Split application basic block percentage\
+              -split_num=x must be 1 < x <= 10 " << SplitNum << "\n";
+      return false;
+    }
+
     std::string funcName = obj.getAsObject()->getString("name")->str();
     llvm::Regex reFuncName(funcName);
+
     if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
       obfuscatedFuncs.insert(F.getName().str());
       errs() << "[Frontend]: SplitBasicBlock func " << F.getName() << "\n";
       split(&F);
+      errs() << "[Frontend]: Successfully SplitBasicBlock func " << F.getName() << "\n";
       ++Split;
+      return true;
     }
   }
 

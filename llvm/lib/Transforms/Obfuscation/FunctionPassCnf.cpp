@@ -50,13 +50,41 @@ bool FunctionPassCnf::doInitialization(llvm::Module &M){
       this->flag = false;
       return false;
     }
-    llvm::json::Value configJson = expectedConfig.get();
+    configJson = expectedConfig.get();
     if (!configJson.getAsObject()) {
       llvm::errs() << "[Frontend]: Config Error: JSON is broken\n";
       this->flag = false;
       return false;
     }
 
+    if (!toValidateJson())
+    { 
+      errs() << "[Frontend]:  Config.Json ValidateJson Failed!!\n";
+      std::exit(EXIT_FAILURE);
+    }
+    // llvm::errs() << "[Frontend]: Read Config JSON Done!!""\n";
     this->flag = true;
     return true;
+}
+
+//to validate json config files
+bool FunctionPassCnf::toValidateJson() {
+  llvm::json::Object *jsonObj = configJson.getAsObject();
+  if (jsonObj->getArray("obfuscation")) {
+    llvm::json::Array *obfArray = jsonObj->getArray("obfuscation");
+
+    for (auto &obj : *obfArray) {
+      if (!obj.getAsObject()->getString("name")) {
+        errs() << "[Frontend]: json obfuscation array not have name " << "\n";
+        return false;
+      }
+    }
+    errs() << "[Frontend]: json Validate Json successed !!" << "\n";
+    return true;
+  }
+  else
+  {
+    errs() << "[Frontend]: json obfuscation not found" << "\n";
+    return false;
+  }
 }

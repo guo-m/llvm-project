@@ -56,8 +56,7 @@ struct Substitution : public FunctionPassCnf {
   int SubTimes;
   Substitution() : FunctionPassCnf(ID) {}
 
-  Substitution(bool flag) : FunctionPassCnf(ID) {
-    this->flag = flag;
+  Substitution(bool flag) : FunctionPassCnf(flag, ID) {
     funcAdd[0] = &Substitution::addNeg;
     funcAdd[1] = &Substitution::addDoubleNeg;
     funcAdd[2] = &Substitution::addRand;
@@ -113,20 +112,35 @@ bool Substitution::runOnFunction(Function &F) {
   }
   
   llvm::json::Object *jsonObj = configJson.getAsObject();
-  if (!toValidateJson(jsonObj))
-  { 
-    std::exit(EXIT_FAILURE);
-  }
-  
-  SubTimes = jsonObj->getInteger("sub_loop").getValueOr(0);
-  // Check if the percentage is correct sub_loop
-  if (SubTimes <= 0) {
-    errs() << "Substitution application number sub_loop=x must be x > 0";
+  int enable_sub = jsonObj->getInteger("sub").getValueOr(1);
+  if (!enable_sub)
+  {
+    errs() << "[Frontend]:Config Not Substitution!!\n";
     return false;
   }
 
-  substitute(&F);
-  return true;
+  llvm::json::Array *subsArray = jsonObj->getArray("obfuscation");
+  for (auto &obj : *subsArray) {
+
+    SubTimes = obj.getAsObject()->getInteger("sub_loop").getValueOr(0);
+    // Check if the percentage is correct sub_loop
+    if (SubTimes <= 0) {
+      errs() << "Substitution application number sub_loop=x must be x > 0" << SubTimes <<"\n";
+      return false;
+    }
+
+    std::string funcName = obj.getAsObject()->getString("name")->str();
+    llvm::Regex reFuncName(funcName);
+
+    if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
+      obfuscatedFuncs.insert(F.getName().str());
+      errs() << "[Frontend]: substitute func " << F.getName() << "\n";
+      substitute(&F);
+      errs() << "[Frontend]: Successfully substitute func " << F.getName() << "\n";
+      return true;
+    }
+  }
+  return false;
 }
 
 bool Substitution::substitute(Function *f) {

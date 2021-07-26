@@ -136,10 +136,7 @@ struct BogusControlFlow : public FunctionPassCnf {
   int ObfProbRate;
 
   BogusControlFlow() : FunctionPassCnf(ID) {}
-  BogusControlFlow(bool flag) : FunctionPassCnf(ID) {
-    this->flag = flag;
-    BogusControlFlow();
-  }
+  BogusControlFlow(bool flag) : FunctionPassCnf(flag, ID) {}
 
   /* runOnFunction
    *
@@ -155,36 +152,26 @@ struct BogusControlFlow : public FunctionPassCnf {
     }
     
     llvm::json::Object *jsonObj = configJson.getAsObject();
-    if (!toValidateJson(jsonObj))
-    { 
-      std::exit(EXIT_FAILURE);
+    int enable_bcf = jsonObj->getInteger("bcf").getValueOr(1);
+
+    if (!enable_bcf) {
+      errs() << "[Frontend]: Config Error: not use BogusControlFlow \n";
+      return false;
     }
 
     llvm::json::Array *BogusArray = jsonObj->getArray("obfuscation");
-
     for (auto &obj : *BogusArray) {
 
-      if (!obj.getAsObject()->getString("bcf")) {
-        errs() << "[Frontend]: Config Error: missing 'bcf' string object in obfuscation array\n";
-        return false;
-      }
-
-      ObfTimes = jsonObj->getInteger("bcf_loop").getValueOr(0);
-
+      ObfTimes = obj.getAsObject()->getInteger("bcf_loop").getValueOr(0);
       // Check if the percentage is correct
       if (ObfTimes <= 0) {
-        errs() << "BogusControlFlow application number bcf_loop=x must be x > 0";
+        errs() << "BogusControlFlow application number bcf_loop=x must be x > 0 \n";
         return false;
       }
 
-      ObfProbRate = jsonObj->getInteger("bcf_prob").getValueOr(0);
-
-      // Check if the number of applications is correct
-      if (!((ObfProbRate > 0) && (ObfProbRate <= 100))) {
-        errs() << "BogusControlFlow application basic blocks percentage "
-                  "bcf_prob=x must be 0 < x <= 100";
-        return false;
-      }
+      // ObfProbRate = obj.getAsObject()->getInteger("bcf_prob").getValueOr(0);
+      //set to default 100% boguscontrol flow 
+      ObfProbRate = 100;
 
       std::string funcName = obj.getAsObject()->getString("name")->str();
       llvm::Regex reFuncName(funcName);

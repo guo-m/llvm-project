@@ -146,26 +146,3 @@ bool toObfuscate(bool flag, Function *f, std::string const &attribute) {
 
   return false;
 }
-
-//to validate json config files
-bool toValidateJson(llvm::json::Object *jsonObj) {
-   if (jsonObj->getArray("obfuscation")) {
-    llvm::json::Array *obfArray = jsonObj->getArray("obfuscation");
-
-    for (auto &obj : *obfArray) {
-      if (!obj.getAsObject()->getString("name")) {
-        errs() << "[Frontend]: json obfuscation array not have name " << "\n";
-        return false;
-      }
-    }
-    errs() << "[Frontend]: json Validate Json successed !!" << "\n";
-    return true;
-  }
-  else
-  {
-    errs() << "[Frontend]: json obfuscation not found" << "\n";
-    return false;
-  }
-}
-
-
