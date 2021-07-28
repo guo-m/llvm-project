@@ -130,7 +130,7 @@ void SplitBasicBlock::split(Function *f) {
         ++it;
       }
       last = test[i];
-      if (toSplit->size() < 2)
+      if (toSplit->size() < 2 || !toSplit->splitAnable(it))
         continue;
       toSplit = toSplit->splitBasicBlock(it, toSplit->getName() + ".split");
     }

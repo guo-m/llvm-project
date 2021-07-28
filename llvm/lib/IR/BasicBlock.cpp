@@ -378,6 +378,11 @@ bool BasicBlock::isLegalToHoistInto() const {
   return !Term->isExceptionalTerminator();
 }
 
+bool BasicBlock::splitAnable(iterator I)
+{
+  return (getTerminator() && I != InstList.end());
+}
+
 /// This splits a basic block into two at the specified
 /// instruction.  Note that all instructions BEFORE the specified iterator stay
 /// as part of the original basic block, an unconditional branch is added to

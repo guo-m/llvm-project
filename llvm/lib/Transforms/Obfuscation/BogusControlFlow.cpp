@@ -287,6 +287,8 @@ struct BogusControlFlow : public FunctionPassCnf {
     // part, because they actually are updated in the second part according to
     // them.
     BasicBlock::iterator i1 = basicBlock->begin();
+    if (!basicBlock->splitAnable(i1))
+        return;
     if (basicBlock->getFirstNonPHIOrDbgOrLifetime())
       i1 = (BasicBlock::iterator)basicBlock->getFirstNonPHIOrDbgOrLifetime();
     Twine *var;

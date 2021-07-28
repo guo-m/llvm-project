@@ -387,6 +387,7 @@ public:
 
   bool canSplitPredecessors() const;
 
+  bool splitAnable(iterator I);
   /// Split the basic block into two basic blocks at the specified instruction.
   ///
   /// Note that all instructions BEFORE the specified iterator stay as part of
