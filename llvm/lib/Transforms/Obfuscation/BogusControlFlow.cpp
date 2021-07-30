@@ -147,7 +147,7 @@ struct BogusControlFlow : public FunctionPassCnf {
     // judgment if need to BogusControlFlow
     if (!this->flag)
     {
-      errs() << "[Frontend]: Not BogusControlFlow!!\n";
+      // errs() << "[Frontend]: Not BogusControlFlow!!\n";
       return false;
     }
     
@@ -155,7 +155,7 @@ struct BogusControlFlow : public FunctionPassCnf {
     int enable_bcf = jsonObj->getInteger("bcf").getValueOr(1);
 
     if (!enable_bcf) {
-      errs() << "[Frontend]: Config Error: not use BogusControlFlow \n";
+      // errs() << "[Frontend]: Config Error: not use BogusControlFlow \n";
       return false;
     }
 
