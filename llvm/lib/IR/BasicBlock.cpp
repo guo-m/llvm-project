@@ -372,6 +372,12 @@ bool BasicBlock::isLegalToHoistInto() const {
   return !Term->isExceptionalTerminator();
 }
 
+bool BasicBlock::splitAnable(iterator I)
+{
+  return (getTerminator() && I != InstList.end());
+}
+
+
 BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName,
                                         bool Before) {
   if (Before)
