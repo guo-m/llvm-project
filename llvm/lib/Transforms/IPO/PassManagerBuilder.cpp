@@ -48,6 +48,12 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/Transforms/Obfuscation/BogusControlFlow.h"
+#include "llvm/Transforms/Obfuscation/Flattening.h"
+#include "llvm/Transforms/Obfuscation/Split.h"
+#include "llvm/Transforms/Obfuscation/Substitution.h"
+#include "llvm/Transforms/Obfuscation/StringObfuscation.h"
+#include "llvm/Transforms/Obfuscation/CryptoUtils.h"
 
 using namespace llvm;
 
@@ -177,6 +183,35 @@ cl::opt<AttributorRunOption> AttributorRun(
                clEnumValN(AttributorRunOption::NONE, "none",
                           "disable attributor runs")));
 
+// Flags for obfuscation
+static cl::opt<bool> 
+Flattening("fla", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable the flattening pass"));
+
+static cl::opt<bool> 
+BogusControlFlow("bcf", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable bogus control flow"));
+
+static cl::opt<bool> 
+Substitution("sub", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable instruction substitutions"));
+
+static cl::opt<std::string> 
+AesSeed("aesSeed", cl::init(""), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("seed for the AES-CTR PRNG"));
+
+static cl::opt<bool> 
+Split("split", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable basic block splitting"));
+
+static cl::opt<std::string> 
+Seed("seed", cl::init(""), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("seed for the random"));
+
+static cl::opt<bool> 
+StringObf("sobf", cl::init(false), cl::Hidden,
+    cl::ZeroOrMore, cl::desc("Enable the string obfuscation"));
+
 extern cl::opt<bool> EnableKnowledgeRetention;
 
 PassManagerBuilder::PassManagerBuilder() {
@@ -209,6 +244,13 @@ PassManagerBuilder::PassManagerBuilder() {
     PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
     CallGraphProfile = true;
+
+    // Initialization of the global cryptographically
+    // secure pseudo-random generator
+    if(!AesSeed.empty()) {
+        if(!llvm::cryptoutils->prng_seed(AesSeed.c_str()))
+			exit(1);
+    }
 }
 
 PassManagerBuilder::~PassManagerBuilder() {
@@ -534,6 +576,14 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Allow forcing function attributes as a debugging and tuning aid.
   MPM.add(createForceFunctionAttrsLegacyPass());
+
+ //obfuscator pass
+  MPM.add(createSplitBasicBlock(Split));
+  MPM.add(createBogus(BogusControlFlow));
+  MPM.add(createFlattening(Flattening));
+  MPM.add(createStringObfuscation(StringObf));
+  MPM.add(createSubstitution(Substitution));
+
 
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
