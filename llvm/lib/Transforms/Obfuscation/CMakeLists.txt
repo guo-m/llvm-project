@@ -1,4 +1,4 @@
-add_llvm_library(LLVMObfuscation
+add_llvm_library( LLVMObfuscation
   CryptoUtils.cpp
   Substitution.cpp
   StringObfuscation.cpp
@@ -7,8 +7,7 @@ add_llvm_library(LLVMObfuscation
   SplitBasicBlocks.cpp
   Flattening.cpp
   FunctionPassCnf.cpp
-  ADDITIONAL_HEADER_DIRS
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/Obfuscation
+  
+  PLUGIN_TOOL
+  opt
 )
-
-add_dependencies(LLVMObfuscation intrinsics_gen)
