@@ -8,6 +8,9 @@ add_llvm_library( LLVMObfuscation
   Flattening.cpp
   FunctionPassCnf.cpp
   
+  DEPENDS
+  intrinsics_gen
+
   PLUGIN_TOOL
   opt
 )
