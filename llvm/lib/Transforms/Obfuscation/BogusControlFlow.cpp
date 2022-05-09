@@ -145,12 +145,11 @@ struct BogusControlFlow : public FunctionPassCnf {
    */
   virtual bool runOnFunction(Function &F) {
     // judgment if need to BogusControlFlow
-    if (!this->flag)
+    if (!this->flag || F.empty())
     {
       // errs() << "[Frontend]: Not BogusControlFlow!!\n";
       return false;
-    }
-    
+    }  
     llvm::json::Object *jsonObj = configJson.getAsObject();
     int enable_bcf = jsonObj->getInteger("bcf").getValueOr(1);
 
@@ -175,7 +174,7 @@ struct BogusControlFlow : public FunctionPassCnf {
 
       std::string funcName = obj.getAsObject()->getString("name")->str();
       llvm::Regex reFuncName(funcName);
-
+      errs() << "[Frontend]: bogusControlFlow func Name " << F.getName() << " : config func Name = " << funcName  << "\n"; 
       if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
         obfuscatedFuncs.insert(F.getName().str());
         errs() << "[Frontend]: bogusControlFlow func " << F.getName() << "\n";

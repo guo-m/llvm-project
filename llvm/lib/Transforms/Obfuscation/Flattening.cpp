@@ -42,7 +42,7 @@ Pass *llvm::createFlattening(bool flag) { return new Flattening(flag); }
 
 bool Flattening::runOnFunction(Function &F) {
   // judgment if need to flattening
-  if (!this->flag)
+  if (!this->flag || F.empty())
   {
     errs() << "[Frontend]: Not Flattening!!\n";
     return false;
@@ -61,7 +61,7 @@ bool Flattening::runOnFunction(Function &F) {
 
     std::string funcName = obj.getAsObject()->getString("name")->str();
     llvm::Regex reFuncName(funcName);
-
+    errs() << "[Frontend]: Flattening func Name " << F.getName() << " : config func Name = " << funcName  << "\n";
     if (reFuncName.match(F.getName()) && obfuscatedFuncs.find(F.getName().str()) == obfuscatedFuncs.end() ) {
       obfuscatedFuncs.insert(F.getName().str());
       errs() << "[Frontend]: Flattening func " << F.getName() << "\n";

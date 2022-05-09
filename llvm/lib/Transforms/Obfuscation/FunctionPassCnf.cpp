@@ -7,7 +7,6 @@
 using namespace llvm;
 using namespace std;
 bool FunctionPassCnf::doInitialization(llvm::Module &M){
-
     std::string homeDir;
     char* home_dir = getenv("DECLANG_HOME");
     if (home_dir == nullptr) {
@@ -87,4 +86,22 @@ bool FunctionPassCnf::toValidateJson() {
     errs() << "[Frontend]: json obfuscation not found" << "\n";
     return false;
   }
+}
+
+bool FunctionPassCnf::PrintModuleAddress(llvm::Module &M)
+{
+  errs()<<"[Frontend]: bogusControlFlow Module sources name : "<< M.getSourceFileName() <<"\n";
+  errs()<<"[Frontend]: bogusControlFlow Module name : "<< M.getNamedValue(M.getName()) <<"\n";
+  return true;
+}
+
+
+bool FunctionPassCnf::PrintFunctionAddress(llvm::Function &F)
+{
+  errs()<<"[Frontend]: bogusControlFlow Founction name : "<< F.getParent()->getNamedValue(F.getName()) <<"\n";
+  for(auto arg = F.arg_begin(); arg != F.arg_end(); ++arg) {
+    errs()<<"[Frontend]: arg name : "<< arg->getName() << "\n";
+    errs()<<"[Frontend]: arg all : "<<  *arg << "\n";
+  }
+  return true;
 }

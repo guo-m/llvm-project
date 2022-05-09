@@ -38,7 +38,7 @@ namespace llvm {
                 }
 
                 virtual bool runOnModule(Module &M) {
-                        if(!is_flag)
+                        if(!is_flag || M.empty())
                             return false;
                         std::vector<GlobalVariable*> toDelConstGlob;
                         //std::vector<GlobalVariable*> encGlob;

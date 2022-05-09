@@ -19,6 +19,8 @@ struct FunctionPassCnf : public llvm::FunctionPass {
   }
   virtual bool doInitialization(llvm::Module &M);
   bool toValidateJson();
+  bool PrintFunctionAddress(llvm::Function &F);
+  bool PrintModuleAddress(llvm::Module &M);
 
 }; // namespace
 
